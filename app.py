@@ -1,6 +1,6 @@
 """
-Gaming Cafe Analytics Dashboard - FIXED VERSION
-Complete ML Pipeline with Error Handling
+Gaming Cafe Analytics Dashboard - COMPLETE VERSION
+Classification | Clustering | Association Rules | Regression | Dynamic Pricing
 """
 
 import streamlit as st
@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from io import BytesIO
 import base64
 
@@ -17,11 +18,29 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture
+
+# Classification Models
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+
+# Regression Models
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.metrics import (silhouette_score, davies_bouldin_score, 
-                             mean_squared_error, r2_score, mean_absolute_error)
+
+# Metrics
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, classification_report, roc_curve, auc, roc_auc_score,
+    silhouette_score, davies_bouldin_score,
+    mean_squared_error, r2_score, mean_absolute_error
+)
+
+# Association Rules
 from mlxtend.frequent_patterns import apriori, association_rules
 from mlxtend.preprocessing import TransactionEncoder
 
@@ -89,7 +108,6 @@ def load_data(uploaded_file=None):
         df = pd.read_csv(uploaded_file)
     else:
         try:
-            # Try GitHub URL
             url = "https://raw.githubusercontent.com/tanmay-32/streamlit_pbl/main/gaming_cafe_market_survey_600_responses.csv"
             df = pd.read_csv(url)
         except:
@@ -152,12 +170,13 @@ if df is not None:
         )
 
     # Main Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Overview", 
-        "🎯 Clustering & Personas", 
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Overview",
+        "🎯 Classification",
+        "🔍 Clustering & Personas", 
         "🔗 Association Rules",
-        "💰 Regression & Pricing",
-        "🎛️ Dynamic Pricing Engine"
+        "💰 Regression Analysis",
+        "🎛️ Dynamic Pricing"
     ])
 
     # ========================================================================
@@ -211,14 +230,226 @@ if df is not None:
                 st.plotly_chart(fig, use_container_width=True)
 
     # ========================================================================
-    # TAB 2: CLUSTERING & PERSONAS
+    # TAB 2: CLASSIFICATION
     # ========================================================================
     with tab2:
-        st.header("🎯 Customer Clustering & Persona Analysis")
+        st.header("🎯 Classification Analysis")
+        st.markdown("### Predict Customer Interest Level with Multiple Algorithms")
+
+        # Sidebar controls for classification
+        with st.sidebar:
+            st.markdown("### 🎯 Classification Settings")
+            test_size_class = st.slider("Test Size (%) - Classification", 10, 40, 20, key="test_class") / 100
+            selected_classifiers = st.multiselect(
+                "Select Classification Models",
+                ["Logistic Regression", "Decision Tree", "Random Forest", 
+                 "Gradient Boosting", "SVM", "KNN", "Naive Bayes"],
+                default=["Logistic Regression", "Random Forest", "Gradient Boosting"]
+            )
+
+        # Check for classification target
+        target_col_class = 'Q45_Interest_In_Concept'
+
+        if target_col_class in df.columns:
+            try:
+                # Prepare features for classification
+                predictor_features_class = [
+                    'Q1_Age', 'Q2_Gender', 'Q6_Monthly_Income_AED',
+                    'Q11_Play_Video_Games', 'Q15_Hours_Per_Week',
+                    'Q21_Social_Aspect_Importance', 'Q26_Food_Quality_Importance',
+                    'Q37_Total_WTP_Per_Visit_AED', 'Q38_Price_Sensitivity'
+                ]
+
+                predictor_features_class = [f for f in predictor_features_class if f in df.columns]
+
+                if len(predictor_features_class) > 3:
+                    df_class = df.copy()
+
+                    # Binary classification: Interested vs Not Interested
+                    df_class['Interest_Binary'] = df_class[target_col_class].apply(
+                        lambda x: 1 if 'Extremely' in str(x) or 'Very' in str(x) else 0
+                    )
+
+                    df_processed_class = preprocess_data(df_class[predictor_features_class + ['Interest_Binary']])
+                    df_processed_class = df_processed_class.select_dtypes(include=[np.number])
+
+                    X = df_processed_class[predictor_features_class]
+                    y = df_processed_class['Interest_Binary']
+
+                    # Train-test split
+                    X_train, X_test, y_train, y_test = train_test_split(
+                        X, y, test_size=test_size_class, random_state=42
+                    )
+
+                    # Scale features
+                    scaler = StandardScaler()
+                    X_train_scaled = scaler.fit_transform(X_train)
+                    X_test_scaled = scaler.transform(X_test)
+
+                    # Classification models
+                    classifiers_dict = {
+                        "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000),
+                        "Decision Tree": DecisionTreeClassifier(random_state=42, max_depth=10),
+                        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10),
+                        "Gradient Boosting": GradientBoostingClassifier(n_estimators=100, random_state=42),
+                        "SVM": SVC(random_state=42, probability=True),
+                        "KNN": KNeighborsClassifier(n_neighbors=5),
+                        "Naive Bayes": GaussianNB()
+                    }
+
+                    # Train and evaluate models
+                    results_class = {}
+
+                    for name in selected_classifiers:
+                        if name in classifiers_dict:
+                            model = classifiers_dict[name]
+
+                            # Train
+                            if name in ["Logistic Regression", "SVM", "KNN", "Naive Bayes"]:
+                                model.fit(X_train_scaled, y_train)
+                                y_pred = model.predict(X_test_scaled)
+                                y_pred_proba = model.predict_proba(X_test_scaled)[:, 1] if hasattr(model, 'predict_proba') else None
+                            else:
+                                model.fit(X_train, y_train)
+                                y_pred = model.predict(X_test)
+                                y_pred_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, 'predict_proba') else None
+
+                            # Calculate metrics
+                            accuracy = accuracy_score(y_test, y_pred)
+                            precision = precision_score(y_test, y_pred, average='binary', zero_division=0)
+                            recall = recall_score(y_test, y_pred, average='binary', zero_division=0)
+                            f1 = f1_score(y_test, y_pred, average='binary', zero_division=0)
+
+                            results_class[name] = {
+                                'Accuracy': accuracy,
+                                'Precision': precision,
+                                'Recall': recall,
+                                'F1-Score': f1,
+                                'predictions': y_pred,
+                                'predictions_proba': y_pred_proba
+                            }
+
+                    # Display results
+                    st.subheader("📊 Model Performance Comparison")
+
+                    comparison_df_class = pd.DataFrame({
+                        'Model': list(results_class.keys()),
+                        'Accuracy': [results_class[m]['Accuracy'] for m in results_class.keys()],
+                        'Precision': [results_class[m]['Precision'] for m in results_class.keys()],
+                        'Recall': [results_class[m]['Recall'] for m in results_class.keys()],
+                        'F1-Score': [results_class[m]['F1-Score'] for m in results_class.keys()]
+                    })
+
+                    st.dataframe(
+                        comparison_df_class.style.background_gradient(cmap='RdYlGn')
+                                                 .format({
+                                                     'Accuracy': '{:.4f}',
+                                                     'Precision': '{:.4f}',
+                                                     'Recall': '{:.4f}',
+                                                     'F1-Score': '{:.4f}'
+                                                 }),
+                        use_container_width=True
+                    )
+
+                    # Visualizations
+                    st.markdown("---")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.subheader("Accuracy Comparison")
+                        fig = px.bar(comparison_df_class, x='Model', y='Accuracy',
+                                   color='Accuracy', color_continuous_scale='viridis',
+                                   text='Accuracy')
+                        fig.update_traces(texttemplate='%{text:.3f}', textposition='outside')
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    with col2:
+                        st.subheader("F1-Score Comparison")
+                        fig = px.bar(comparison_df_class, x='Model', y='F1-Score',
+                                   color='F1-Score', color_continuous_scale='blues',
+                                   text='F1-Score')
+                        fig.update_traces(texttemplate='%{text:.3f}', textposition='outside')
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    # Metrics comparison radar chart
+                    st.subheader("📈 All Metrics Comparison")
+
+                    fig = go.Figure()
+
+                    for model in results_class.keys():
+                        fig.add_trace(go.Scatterpolar(
+                            r=[results_class[model]['Accuracy'],
+                               results_class[model]['Precision'],
+                               results_class[model]['Recall'],
+                               results_class[model]['F1-Score']],
+                            theta=['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+                            fill='toself',
+                            name=model
+                        ))
+
+                    fig.update_layout(
+                        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                        showlegend=True,
+                        height=500
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Best model analysis
+                    best_model_class = comparison_df_class.loc[comparison_df_class['Accuracy'].idxmax(), 'Model']
+                    st.success(f"🏆 Best Model: **{best_model_class}** (Accuracy = {results_class[best_model_class]['Accuracy']:.4f})")
+
+                    # Confusion Matrix for best model
+                    st.subheader(f"🎯 Confusion Matrix - {best_model_class}")
+
+                    cm = confusion_matrix(y_test, results_class[best_model_class]['predictions'])
+
+                    fig = px.imshow(cm, 
+                                   labels=dict(x="Predicted", y="Actual", color="Count"),
+                                   x=['Not Interested', 'Interested'],
+                                   y=['Not Interested', 'Interested'],
+                                   color_continuous_scale='Blues',
+                                   text_auto=True)
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Classification Report
+                    st.subheader("📋 Detailed Classification Report")
+                    report = classification_report(y_test, results_class[best_model_class]['predictions'],
+                                                  target_names=['Not Interested', 'Interested'],
+                                                  output_dict=True)
+                    report_df = pd.DataFrame(report).transpose()
+                    st.dataframe(report_df.style.background_gradient(cmap='RdYlGn'), use_container_width=True)
+
+                    # Download results
+                    st.download_button(
+                        label="📥 Download Classification Results",
+                        data=comparison_df_class.to_csv(index=False),
+                        file_name="classification_results.csv",
+                        mime="text/csv"
+                    )
+
+                else:
+                    st.warning("Not enough predictor features available for classification.")
+
+            except Exception as e:
+                st.error(f"Error in classification: {str(e)}")
+                st.info("Check your data quality and feature selection.")
+        else:
+            st.error(f"Target variable '{target_col_class}' not found in dataset.")
+
+    # ========================================================================
+    # TAB 3: CLUSTERING & PERSONAS
+    # ========================================================================
+    with tab3:
+        st.header("🔍 Customer Clustering & Persona Analysis")
 
         with st.sidebar:
-            st.markdown("### 🎯 Clustering Settings")
-            n_clusters = st.slider("Number of Clusters (K)", 2, 10, 5)
+            st.markdown("### 🔍 Clustering Settings")
+            n_clusters = st.slider("Number of Clusters (K)", 2, 10, 5, key="n_clusters")
             clustering_method = st.selectbox("Clustering Method", ["K-Means", "Gaussian Mixture Model"])
 
         clustering_features = [
@@ -234,8 +465,6 @@ if df is not None:
         if len(clustering_features) > 5:
             try:
                 df_processed = preprocess_data(df[clustering_features])
-
-                # Ensure all columns are numeric
                 df_processed = df_processed.select_dtypes(include=[np.number])
 
                 scaler = StandardScaler()
@@ -254,9 +483,9 @@ if df is not None:
 
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Silhouette Score", f"{silhouette:.3f}")
+                    st.metric("Silhouette Score", f"{silhouette:.3f}", help="Higher is better (max 1.0)")
                 with col2:
-                    st.metric("Davies-Bouldin Score", f"{davies_bouldin:.3f}")
+                    st.metric("Davies-Bouldin Score", f"{davies_bouldin:.3f}", help="Lower is better")
                 with col3:
                     st.metric("Number of Clusters", n_clusters)
 
@@ -270,7 +499,8 @@ if df is not None:
                 st.subheader("Customer Segments Visualization")
                 fig = px.scatter(df, x='PCA1', y='PCA2', color='Cluster',
                                title=f"{clustering_method} Clustering (PCA Projection)",
-                               color_continuous_scale='viridis')
+                               color_continuous_scale='viridis',
+                               hover_data={'Cluster': True})
                 fig.update_layout(height=500)
                 st.plotly_chart(fig, use_container_width=True)
 
@@ -281,16 +511,38 @@ if df is not None:
                     cluster_counts = df['Cluster'].value_counts().sort_index()
                     fig = px.bar(x=cluster_counts.index, y=cluster_counts.values,
                                labels={'x': 'Cluster', 'y': 'Customer Count'},
-                               color=cluster_counts.values, color_continuous_scale='blues')
+                               color=cluster_counts.values, color_continuous_scale='blues',
+                               text=cluster_counts.values)
+                    fig.update_traces(textposition='outside')
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
                     st.subheader("Cluster Characteristics")
-                    # FIXED: Select only numeric columns for mean calculation
                     numeric_features = df_processed.select_dtypes(include=[np.number]).columns.tolist()[:5]
                     cluster_profile = df.groupby('Cluster')[numeric_features].mean()
                     st.dataframe(cluster_profile.style.background_gradient(cmap='RdYlGn'), 
                                use_container_width=True)
+
+                # Cluster insights
+                st.subheader("💡 Cluster Insights & Persona Profiles")
+                for cluster_id in range(n_clusters):
+                    with st.expander(f"📊 Cluster {cluster_id} Profile"):
+                        cluster_data = df[df['Cluster'] == cluster_id]
+                        st.write(f"**Size:** {len(cluster_data)} customers ({len(cluster_data)/len(df)*100:.1f}%)")
+
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            if 'Q1_Age' in cluster_data.columns:
+                                mode_age = cluster_data['Q1_Age'].mode()[0] if len(cluster_data['Q1_Age'].mode()) > 0 else "N/A"
+                                st.metric("Dominant Age", mode_age)
+                        with col2:
+                            if 'Q11_Play_Video_Games' in df_processed.columns:
+                                avg_gaming = cluster_data['Q11_Play_Video_Games'].mean()
+                                st.metric("Avg Gaming Freq", f"{avg_gaming:.1f}")
+                        with col3:
+                            if 'Q37_Total_WTP_Per_Visit_AED' in cluster_data.columns:
+                                mode_spend = cluster_data['Q37_Total_WTP_Per_Visit_AED'].mode()[0] if len(cluster_data) > 0 else "N/A"
+                                st.metric("Common Spending", mode_spend)
 
                 st.download_button(
                     label="📥 Download Clustering Results",
@@ -305,15 +557,15 @@ if df is not None:
             st.warning("Not enough features available for clustering analysis.")
 
     # ========================================================================
-    # TAB 3: ASSOCIATION RULES
+    # TAB 4: ASSOCIATION RULES
     # ========================================================================
-    with tab3:
+    with tab4:
         st.header("🔗 Association Rule Mining")
 
         with st.sidebar:
             st.markdown("### 🔗 Association Rules Settings")
-            min_support = st.slider("Minimum Support (%)", 1, 50, 10) / 100
-            min_confidence = st.slider("Minimum Confidence (%)", 10, 100, 70) / 100
+            min_support = st.slider("Minimum Support (%)", 1, 50, 10, key="support") / 100
+            min_confidence = st.slider("Minimum Confidence (%)", 10, 100, 70, key="confidence") / 100
             top_n_rules = st.slider("Top N Rules to Display", 5, 50, 10)
 
         if 'Q13_Game_Types_Preferred' in df.columns and 'Q23_Leisure_Venues_Visited' in df.columns:
@@ -367,12 +619,14 @@ if df is not None:
                             with col1:
                                 st.subheader("Support vs Confidence")
                                 fig = px.scatter(rules, x='support', y='confidence', size='lift',
-                                               color='lift', color_continuous_scale='viridis')
+                                               color='lift', color_continuous_scale='viridis',
+                                               hover_data=['antecedents', 'consequents'])
                                 st.plotly_chart(fig, use_container_width=True)
 
                             with col2:
                                 st.subheader("Lift Distribution")
-                                fig = px.histogram(rules, x='lift', nbins=20, color_discrete_sequence=['#667eea'])
+                                fig = px.histogram(rules, x='lift', nbins=20, 
+                                                 color_discrete_sequence=['#667eea'])
                                 st.plotly_chart(fig, use_container_width=True)
 
                             st.download_button(
@@ -393,18 +647,19 @@ if df is not None:
             st.error("Required columns not found: Q13_Game_Types_Preferred and Q23_Leisure_Venues_Visited")
 
     # ========================================================================
-    # TAB 4: REGRESSION & PRICING
+    # TAB 5: REGRESSION ANALYSIS
     # ========================================================================
-    with tab4:
+    with tab5:
         st.header("💰 Regression Analysis & Price Prediction")
+        st.markdown("### Linear, Ridge, and Lasso Regression Comparison")
 
         with st.sidebar:
             st.markdown("### 💰 Regression Settings")
-            test_size = st.slider("Test Size (%)", 10, 40, 20) / 100
-            selected_models = st.multiselect(
-                "Select Models to Compare",
+            test_size_reg = st.slider("Test Size (%) - Regression", 10, 40, 20, key="test_reg") / 100
+            selected_models_reg = st.multiselect(
+                "Select Regression Models",
                 ["Linear Regression", "Ridge", "Lasso", "Decision Tree", "Random Forest", "Gradient Boosting"],
-                default=["Linear Regression", "Random Forest"]
+                default=["Linear Regression", "Ridge", "Lasso"]
             )
 
         target_col = 'Q37_Total_WTP_Per_Visit_AED'
@@ -435,7 +690,7 @@ if df is not None:
                     X = df_processed[predictor_features]
                     y = df_processed[target_col]
 
-                    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size_reg, random_state=42)
 
                     scaler = StandardScaler()
                     X_train_scaled = scaler.fit_transform(X_train)
@@ -452,7 +707,7 @@ if df is not None:
 
                     results = {}
 
-                    for name in selected_models:
+                    for name in selected_models_reg:
                         if name in models_dict:
                             model = models_dict[name]
 
@@ -474,7 +729,7 @@ if df is not None:
                                 'predictions': y_pred
                             }
 
-                    st.subheader("Model Performance Comparison")
+                    st.subheader("📊 Model Performance Comparison")
 
                     comparison_df = pd.DataFrame({
                         'Model': list(results.keys()),
@@ -494,13 +749,17 @@ if df is not None:
                     with col1:
                         st.subheader("R² Score Comparison")
                         fig = px.bar(comparison_df, x='Model', y='R² Score',
-                                   color='R² Score', color_continuous_scale='viridis')
+                                   color='R² Score', color_continuous_scale='viridis',
+                                   text='R² Score')
+                        fig.update_traces(texttemplate='%{text:.3f}', textposition='outside')
                         st.plotly_chart(fig, use_container_width=True)
 
                     with col2:
                         st.subheader("RMSE Comparison")
                         fig = px.bar(comparison_df, x='Model', y='RMSE (AED)',
-                                   color='RMSE (AED)', color_continuous_scale='reds')
+                                   color='RMSE (AED)', color_continuous_scale='reds',
+                                   text='RMSE (AED)')
+                        fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
                         st.plotly_chart(fig, use_container_width=True)
 
                     best_model_name = comparison_df.loc[comparison_df['R² Score'].idxmax(), 'Model']
@@ -512,11 +771,13 @@ if df is not None:
                         'Predicted': results[best_model_name]['predictions']
                     })
 
-                    fig = px.scatter(pred_actual_df, x='Actual', y='Predicted', trendline="ols")
+                    fig = px.scatter(pred_actual_df, x='Actual', y='Predicted', 
+                                   trendline="ols", trendline_color_override="red")
                     fig.add_trace(go.Scatter(x=[y_test.min(), y_test.max()],
                                            y=[y_test.min(), y_test.max()],
                                            mode='lines', name='Perfect Prediction',
                                            line=dict(dash='dash', color='green')))
+                    fig.update_layout(height=500)
                     st.plotly_chart(fig, use_container_width=True)
 
                     st.download_button(
@@ -533,9 +794,9 @@ if df is not None:
             st.error(f"Target variable '{target_col}' not found in dataset.")
 
     # ========================================================================
-    # TAB 5: DYNAMIC PRICING ENGINE
+    # TAB 6: DYNAMIC PRICING ENGINE
     # ========================================================================
-    with tab5:
+    with tab6:
         st.header("🎛️ Dynamic Pricing Engine")
         st.markdown("### Personalized Pricing Based on Customer Attributes")
 
@@ -654,6 +915,6 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: white;'>
     <p>🎮 Gaming Cafe Analytics Dashboard | Built with Streamlit & ML</p>
-    <p>Complete Pipeline: Clustering | Association Rules | Regression | Dynamic Pricing</p>
+    <p>✅ Classification | ✅ Clustering | ✅ Association Rules | ✅ Regression | ✅ Dynamic Pricing</p>
 </div>
 """, unsafe_allow_html=True)
