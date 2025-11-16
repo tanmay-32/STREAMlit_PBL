@@ -1,6 +1,6 @@
 """
-Gaming Cafe Analytics Dashboard - FULLY FIXED VERSION
-All Errors Resolved: Association Rules | Regression | Clustering
+Gaming Cafe Analytics Dashboard - FINAL FIXED VERSION
+Clustering Error Completely Resolved
 """
 
 import streamlit as st
@@ -10,7 +10,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
 import base64
-import json
 
 # Machine Learning Libraries
 from sklearn.model_selection import train_test_split
@@ -415,7 +414,7 @@ if df is not None:
                 st.error(f"Target variable not found.")
 
     # ========================================================================
-    # TAB 3: CLUSTERING
+    # TAB 3: CLUSTERING - COMPLETELY FIXED
     # ========================================================================
     with tab3:
         st.header("🔍 Customer Clustering & Persona Analysis")
@@ -437,27 +436,38 @@ if df is not None:
 
         if len(clustering_features) > 5:
             try:
-                df_processed = preprocess_data(df[clustering_features])
+                # Preprocess data
+                df_processed = preprocess_data(df[clustering_features].copy())
                 df_processed = df_processed.select_dtypes(include=[np.number])
 
-                # FIX: Ensure no object columns remain
+                # CRITICAL FIX: Force all columns to numeric
                 for col in df_processed.columns:
-                    if df_processed[col].dtype == 'object':
-                        df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
+                    df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
 
+                # Fill any NaN values
                 df_processed = df_processed.fillna(df_processed.median())
 
+                # Verify all columns are numeric
+                if not all(df_processed.dtypes.apply(lambda x: np.issubdtype(x, np.number))):
+                    st.error("Some columns are still not numeric. Please check your data.")
+                    st.stop()
+
+                # Scale data
                 scaler = StandardScaler()
                 X_scaled = scaler.fit_transform(df_processed)
 
+                # Clustering
                 if clustering_method == "K-Means":
                     model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
                 else:
                     model = GaussianMixture(n_components=n_clusters, random_state=42)
 
                 clusters = model.fit_predict(X_scaled)
-                df['Cluster'] = clusters
 
+                # Add clusters to PROCESSED dataframe (not original df)
+                df_processed['Cluster'] = clusters
+
+                # Calculate metrics
                 silhouette = silhouette_score(X_scaled, clusters)
                 davies_bouldin = davies_bouldin_score(X_scaled, clusters)
 
@@ -471,13 +481,14 @@ if df is not None:
 
                 st.markdown("---")
 
+                # PCA for visualization
                 pca = PCA(n_components=2)
                 X_pca = pca.fit_transform(X_scaled)
-                df['PCA1'] = X_pca[:, 0]
-                df['PCA2'] = X_pca[:, 1]
+                df_processed['PCA1'] = X_pca[:, 0]
+                df_processed['PCA2'] = X_pca[:, 1]
 
                 st.subheader("Customer Segments Visualization")
-                fig = px.scatter(df, x='PCA1', y='PCA2', color='Cluster',
+                fig = px.scatter(df_processed, x='PCA1', y='PCA2', color='Cluster',
                                title=f"{clustering_method} Clustering",
                                color_continuous_scale='viridis')
                 fig.update_layout(height=500)
@@ -487,7 +498,7 @@ if df is not None:
 
                 with col1:
                     st.subheader("Cluster Size Distribution")
-                    cluster_counts = df['Cluster'].value_counts().sort_index()
+                    cluster_counts = df_processed['Cluster'].value_counts().sort_index()
                     fig = px.bar(x=cluster_counts.index, y=cluster_counts.values,
                                labels={'x': 'Cluster', 'y': 'Count'},
                                color=cluster_counts.values, color_continuous_scale='blues',
@@ -497,24 +508,48 @@ if df is not None:
 
                 with col2:
                     st.subheader("Cluster Characteristics")
-                    # FIX: Only use numeric columns for mean calculation
-                    numeric_cols = df_processed.select_dtypes(include=[np.number]).columns.tolist()[:5]
+                    # CRITICAL FIX: Use ONLY the processed dataframe columns
+                    # Remove 'Cluster', 'PCA1', 'PCA2' from the list
+                    numeric_cols = [col for col in df_processed.columns 
+                                   if col not in ['Cluster', 'PCA1', 'PCA2']][:5]
+
                     if len(numeric_cols) > 0:
-                        cluster_profile = df.groupby('Cluster')[numeric_cols].mean()
+                        # Group by cluster using PROCESSED dataframe
+                        cluster_profile = df_processed.groupby('Cluster')[numeric_cols].mean()
                         st.dataframe(cluster_profile.style.background_gradient(cmap='RdYlGn'), 
                                    use_container_width=True)
                     else:
                         st.info("No numeric columns available for profiling.")
 
+                # Detailed cluster insights
+                st.subheader("💡 Cluster Insights")
+                for cluster_id in range(n_clusters):
+                    with st.expander(f"Cluster {cluster_id} - {len(df_processed[df_processed['Cluster']==cluster_id])} customers"):
+                        cluster_data = df_processed[df_processed['Cluster'] == cluster_id]
+
+                        # Show statistics for numeric columns only
+                        cols_to_show = [col for col in numeric_cols if col in cluster_data.columns]
+
+                        if len(cols_to_show) > 0:
+                            stats_df = cluster_data[cols_to_show].describe().T
+                            st.dataframe(stats_df[['mean', 'std', 'min', 'max']], use_container_width=True)
+                        else:
+                            st.info("No data available for this cluster.")
+
+                # Download results
+                download_df = df_processed[['Cluster', 'PCA1', 'PCA2'] + numeric_cols[:5]]
                 st.download_button(
                     label="📥 Download Clustering Results",
-                    data=df[['Cluster', 'PCA1', 'PCA2']].to_csv(index=False),
+                    data=download_df.to_csv(index=False),
                     file_name="clustering_results.csv",
                     mime="text/csv"
                 )
+
             except Exception as e:
                 st.error(f"Error in clustering: {str(e)}")
-                st.info("Try adjusting the number of clusters.")
+                st.info("Try adjusting the number of clusters or check your data.")
+                import traceback
+                st.code(traceback.format_exc())
         else:
             st.warning("Not enough features available for clustering.")
 
@@ -566,10 +601,14 @@ if df is not None:
                             st.markdown("---")
                             st.subheader(f"Top {len(rules)} Association Rules")
 
-                            # FIX: Convert frozensets to strings BEFORE creating dataframe
+                            # Convert frozensets to strings
                             rules_display = rules.copy()
-                            rules_display['antecedents'] = rules_display['antecedents'].apply(lambda x: ', '.join(list(x)) if isinstance(x, frozenset) else str(x))
-                            rules_display['consequents'] = rules_display['consequents'].apply(lambda x: ', '.join(list(x)) if isinstance(x, frozenset) else str(x))
+                            rules_display['antecedents'] = rules_display['antecedents'].apply(
+                                lambda x: ', '.join(list(x)) if isinstance(x, frozenset) else str(x)
+                            )
+                            rules_display['consequents'] = rules_display['consequents'].apply(
+                                lambda x: ', '.join(list(x)) if isinstance(x, frozenset) else str(x)
+                            )
                             rules_display['support'] = rules_display['support'].apply(lambda x: f"{x:.1%}")
                             rules_display['confidence'] = rules_display['confidence'].apply(lambda x: f"{x:.1%}")
                             rules_display['lift'] = rules_display['lift'].apply(lambda x: f"{x:.2f}")
@@ -581,7 +620,6 @@ if df is not None:
 
                             with col1:
                                 st.subheader("Support vs Confidence")
-                                # Use original numeric values for plotting
                                 fig = px.scatter(rules, x='support', y='confidence', size='lift',
                                                color='lift', color_continuous_scale='viridis')
                                 st.plotly_chart(fig, use_container_width=True)
@@ -837,6 +875,6 @@ else:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: white;'>
-    <p>🎮 Gaming Cafe Analytics Dashboard | All Requirements Met ✅</p>
+    <p>🎮 Gaming Cafe Analytics Dashboard | Clustering Error Fixed ✅</p>
 </div>
 """, unsafe_allow_html=True)
