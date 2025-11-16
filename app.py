@@ -1,6 +1,6 @@
 """
-Gaming Cafe Analytics Dashboard - FINAL FIXED VERSION
-Clustering Error Completely Resolved
+Gaming Cafe Analytics Dashboard - UI IMPROVED VERSION
+Better styling, tab icons, and light/dark mode support
 """
 
 import streamlit as st
@@ -54,29 +54,136 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# IMPROVED Custom CSS - Works in both light and dark modes
 st.markdown("""
 <style>
-    .main {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);}
-    .stTabs [data-baseweb="tab-list"] {gap: 8px;}
-    .stTabs [data-baseweb="tab"] {
-        height: 50px; background-color: #f0f2f6; border-radius: 10px 10px 0px 0px;
-        padding: 10px 20px; font-weight: bold;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;
-    }
-    h1, h2, h3 {color: #ffffff;}
-    .stDownloadButton button {
+    /* Main background gradient */
+    .main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white; border-radius: 10px; border: none; padding: 10px 20px; font-weight: bold;
+    }
+
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: transparent;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 60px;
+        white-space: pre-wrap;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 10px 10px 0px 0px;
+        gap: 1px;
+        padding: 10px 20px;
+        font-weight: 600;
+        font-size: 16px;
+        color: #333333 !important;
+        border: 2px solid transparent;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(255, 255, 255, 1);
+        border-color: #667eea;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border-color: #667eea;
+    }
+
+    /* Headers - visible in both modes */
+    h1 {
+        color: #ffffff !important;
+        font-family: 'Helvetica Neue', sans-serif;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        padding: 10px 0;
+    }
+
+    h2, h3 {
+        color: #ffffff !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    /* Metric cards */
+    [data-testid="stMetricValue"] {
+        font-size: 28px;
+        color: #667eea !important;
+        font-weight: bold;
+    }
+
+    [data-testid="stMetricLabel"] {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333333 !important;
+    }
+
+    /* Download buttons */
+    .stDownloadButton button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border-radius: 10px;
+        border: none;
+        padding: 12px 24px;
+        font-weight: bold;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .stDownloadButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    }
+
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+    /* Success/Error/Warning boxes */
+    .stSuccess, .stError, .stWarning, .stInfo {
+        border-radius: 10px;
+        padding: 15px;
+        font-weight: 500;
+    }
+
+    /* Footer - visible in both modes */
+    .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(102, 126, 234, 0.95);
+        color: white !important;
+        text-align: center;
+        padding: 10px 0;
+        font-weight: 600;
+        z-index: 999;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    /* Dataframe styling */
+    .dataframe {
+        border-radius: 10px;
+        overflow: hidden;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Title
+# Title with better styling
 st.title("🎮 Gaming Cafe Analytics Dashboard")
-st.markdown("### Complete ML Pipeline: Classification | Clustering | Association Rules | Regression | Dynamic Pricing")
+st.markdown('<h3 style="color: white;">Complete ML Pipeline: Classification | Clustering | Association Rules | Regression | Dynamic Pricing</h3>', unsafe_allow_html=True)
 st.markdown("---")
 
 # Sidebar
@@ -168,7 +275,7 @@ if df is not None:
             mime="text/csv"
         )
 
-    # Main Tabs
+    # Main Tabs with proper icons/emojis
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Overview",
         "🎯 Classification",
@@ -182,18 +289,18 @@ if df is not None:
     # TAB 1: OVERVIEW
     # ========================================================================
     with tab1:
-        st.header("📊 Data Overview & Key Insights")
+        st.markdown('<h2 style="color: white;">📊 Data Overview & Key Insights</h2>', unsafe_allow_html=True)
 
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            st.metric("Total Responses", len(df))
+            st.metric("Total Responses", len(df), delta="Sample Size")
 
         with col2:
             if 'Q45_Interest_In_Concept' in df.columns:
                 interested = len(df[~df['Q45_Interest_In_Concept'].str.contains('Not interested', na=False)])
                 interest_rate = (interested / len(df)) * 100
-                st.metric("Interest Rate", f"{interest_rate:.1f}%")
+                st.metric("Interest Rate", f"{interest_rate:.1f}%", delta="Positive")
 
         with col3:
             if 'Q1_Age' in df.columns:
@@ -210,7 +317,7 @@ if df is not None:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Age Distribution")
+            st.markdown('<h3 style="color: white;">Age Distribution</h3>', unsafe_allow_html=True)
             if 'Q1_Age' in df.columns:
                 age_dist = df['Q1_Age'].value_counts().sort_index()
                 fig = px.bar(x=age_dist.index, y=age_dist.values,
@@ -220,7 +327,7 @@ if df is not None:
                 st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader("Interest Level Distribution")
+            st.markdown('<h3 style="color: white;">Interest Level Distribution</h3>', unsafe_allow_html=True)
             if 'Q45_Interest_In_Concept' in df.columns:
                 interest_dist = df['Q45_Interest_In_Concept'].value_counts()
                 fig = px.pie(values=interest_dist.values, names=interest_dist.index,
@@ -232,8 +339,8 @@ if df is not None:
     # TAB 2: CLASSIFICATION
     # ========================================================================
     with tab2:
-        st.header("🎯 Classification Analysis")
-        st.markdown("### Predict Customer Interest Level")
+        st.markdown('<h2 style="color: white;">🎯 Classification Analysis</h2>', unsafe_allow_html=True)
+        st.markdown('<h3 style="color: white;">Predict Customer Interest Level</h3>', unsafe_allow_html=True)
 
         with st.sidebar:
             st.markdown("### 🎯 Classification Settings")
@@ -315,7 +422,7 @@ if df is not None:
                                 'predictions': y_pred
                             }
 
-                    st.subheader("📊 Model Performance Comparison")
+                    st.markdown('<h3 style="color: white;">📊 Model Performance Comparison</h3>', unsafe_allow_html=True)
 
                     comparison_df_class = pd.DataFrame({
                         'Model': list(results_class.keys()),
@@ -339,7 +446,7 @@ if df is not None:
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        st.subheader("Accuracy Comparison")
+                        st.markdown('<h3 style="color: white;">Accuracy Comparison</h3>', unsafe_allow_html=True)
                         fig = px.bar(comparison_df_class, x='Model', y='Accuracy',
                                    color='Accuracy', color_continuous_scale='viridis',
                                    text='Accuracy')
@@ -348,7 +455,7 @@ if df is not None:
                         st.plotly_chart(fig, use_container_width=True)
 
                     with col2:
-                        st.subheader("F1-Score Comparison")
+                        st.markdown('<h3 style="color: white;">F1-Score Comparison</h3>', unsafe_allow_html=True)
                         fig = px.bar(comparison_df_class, x='Model', y='F1-Score',
                                    color='F1-Score', color_continuous_scale='blues',
                                    text='F1-Score')
@@ -356,7 +463,7 @@ if df is not None:
                         fig.update_layout(height=400)
                         st.plotly_chart(fig, use_container_width=True)
 
-                    st.subheader("📈 All Metrics Comparison")
+                    st.markdown('<h3 style="color: white;">📈 All Metrics Comparison</h3>', unsafe_allow_html=True)
 
                     fig = go.Figure()
 
@@ -382,7 +489,7 @@ if df is not None:
                     best_model_class = comparison_df_class.loc[comparison_df_class['Accuracy'].idxmax(), 'Model']
                     st.success(f"🏆 Best Model: **{best_model_class}** (Accuracy = {results_class[best_model_class]['Accuracy']:.4f})")
 
-                    st.subheader(f"🎯 Confusion Matrix - {best_model_class}")
+                    st.markdown(f'<h3 style="color: white;">🎯 Confusion Matrix - {best_model_class}</h3>', unsafe_allow_html=True)
 
                     cm = confusion_matrix(y_test, results_class[best_model_class]['predictions'])
 
@@ -414,10 +521,10 @@ if df is not None:
                 st.error(f"Target variable not found.")
 
     # ========================================================================
-    # TAB 3: CLUSTERING - COMPLETELY FIXED
+    # TAB 3: CLUSTERING
     # ========================================================================
     with tab3:
-        st.header("🔍 Customer Clustering & Persona Analysis")
+        st.markdown('<h2 style="color: white;">🔍 Customer Clustering & Persona Analysis</h2>', unsafe_allow_html=True)
 
         with st.sidebar:
             st.markdown("### 🔍 Clustering Settings")
@@ -436,38 +543,29 @@ if df is not None:
 
         if len(clustering_features) > 5:
             try:
-                # Preprocess data
                 df_processed = preprocess_data(df[clustering_features].copy())
                 df_processed = df_processed.select_dtypes(include=[np.number])
 
-                # CRITICAL FIX: Force all columns to numeric
                 for col in df_processed.columns:
                     df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
 
-                # Fill any NaN values
                 df_processed = df_processed.fillna(df_processed.median())
 
-                # Verify all columns are numeric
                 if not all(df_processed.dtypes.apply(lambda x: np.issubdtype(x, np.number))):
                     st.error("Some columns are still not numeric. Please check your data.")
                     st.stop()
 
-                # Scale data
                 scaler = StandardScaler()
                 X_scaled = scaler.fit_transform(df_processed)
 
-                # Clustering
                 if clustering_method == "K-Means":
                     model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
                 else:
                     model = GaussianMixture(n_components=n_clusters, random_state=42)
 
                 clusters = model.fit_predict(X_scaled)
-
-                # Add clusters to PROCESSED dataframe (not original df)
                 df_processed['Cluster'] = clusters
 
-                # Calculate metrics
                 silhouette = silhouette_score(X_scaled, clusters)
                 davies_bouldin = davies_bouldin_score(X_scaled, clusters)
 
@@ -481,13 +579,12 @@ if df is not None:
 
                 st.markdown("---")
 
-                # PCA for visualization
                 pca = PCA(n_components=2)
                 X_pca = pca.fit_transform(X_scaled)
                 df_processed['PCA1'] = X_pca[:, 0]
                 df_processed['PCA2'] = X_pca[:, 1]
 
-                st.subheader("Customer Segments Visualization")
+                st.markdown('<h3 style="color: white;">Customer Segments Visualization</h3>', unsafe_allow_html=True)
                 fig = px.scatter(df_processed, x='PCA1', y='PCA2', color='Cluster',
                                title=f"{clustering_method} Clustering",
                                color_continuous_scale='viridis')
@@ -497,7 +594,7 @@ if df is not None:
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.subheader("Cluster Size Distribution")
+                    st.markdown('<h3 style="color: white;">Cluster Size Distribution</h3>', unsafe_allow_html=True)
                     cluster_counts = df_processed['Cluster'].value_counts().sort_index()
                     fig = px.bar(x=cluster_counts.index, y=cluster_counts.values,
                                labels={'x': 'Cluster', 'y': 'Count'},
@@ -507,27 +604,21 @@ if df is not None:
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
-                    st.subheader("Cluster Characteristics")
-                    # CRITICAL FIX: Use ONLY the processed dataframe columns
-                    # Remove 'Cluster', 'PCA1', 'PCA2' from the list
+                    st.markdown('<h3 style="color: white;">Cluster Characteristics</h3>', unsafe_allow_html=True)
                     numeric_cols = [col for col in df_processed.columns 
                                    if col not in ['Cluster', 'PCA1', 'PCA2']][:5]
 
                     if len(numeric_cols) > 0:
-                        # Group by cluster using PROCESSED dataframe
                         cluster_profile = df_processed.groupby('Cluster')[numeric_cols].mean()
                         st.dataframe(cluster_profile.style.background_gradient(cmap='RdYlGn'), 
                                    use_container_width=True)
                     else:
                         st.info("No numeric columns available for profiling.")
 
-                # Detailed cluster insights
-                st.subheader("💡 Cluster Insights")
+                st.markdown('<h3 style="color: white;">💡 Cluster Insights</h3>', unsafe_allow_html=True)
                 for cluster_id in range(n_clusters):
                     with st.expander(f"Cluster {cluster_id} - {len(df_processed[df_processed['Cluster']==cluster_id])} customers"):
                         cluster_data = df_processed[df_processed['Cluster'] == cluster_id]
-
-                        # Show statistics for numeric columns only
                         cols_to_show = [col for col in numeric_cols if col in cluster_data.columns]
 
                         if len(cols_to_show) > 0:
@@ -536,7 +627,6 @@ if df is not None:
                         else:
                             st.info("No data available for this cluster.")
 
-                # Download results
                 download_df = df_processed[['Cluster', 'PCA1', 'PCA2'] + numeric_cols[:5]]
                 st.download_button(
                     label="📥 Download Clustering Results",
@@ -548,8 +638,6 @@ if df is not None:
             except Exception as e:
                 st.error(f"Error in clustering: {str(e)}")
                 st.info("Try adjusting the number of clusters or check your data.")
-                import traceback
-                st.code(traceback.format_exc())
         else:
             st.warning("Not enough features available for clustering.")
 
@@ -557,7 +645,7 @@ if df is not None:
     # TAB 4: ASSOCIATION RULES
     # ========================================================================
     with tab4:
-        st.header("🔗 Association Rule Mining")
+        st.markdown('<h2 style="color: white;">🔗 Association Rule Mining</h2>', unsafe_allow_html=True)
 
         with st.sidebar:
             st.markdown("### 🔗 Association Rules")
@@ -599,9 +687,8 @@ if df is not None:
                                 st.metric("Avg Confidence", f"{rules['confidence'].mean():.2%}")
 
                             st.markdown("---")
-                            st.subheader(f"Top {len(rules)} Association Rules")
+                            st.markdown(f'<h3 style="color: white;">Top {len(rules)} Association Rules</h3>', unsafe_allow_html=True)
 
-                            # Convert frozensets to strings
                             rules_display = rules.copy()
                             rules_display['antecedents'] = rules_display['antecedents'].apply(
                                 lambda x: ', '.join(list(x)) if isinstance(x, frozenset) else str(x)
@@ -619,13 +706,13 @@ if df is not None:
                             col1, col2 = st.columns(2)
 
                             with col1:
-                                st.subheader("Support vs Confidence")
+                                st.markdown('<h3 style="color: white;">Support vs Confidence</h3>', unsafe_allow_html=True)
                                 fig = px.scatter(rules, x='support', y='confidence', size='lift',
                                                color='lift', color_continuous_scale='viridis')
                                 st.plotly_chart(fig, use_container_width=True)
 
                             with col2:
-                                st.subheader("Lift Distribution")
+                                st.markdown('<h3 style="color: white;">Lift Distribution</h3>', unsafe_allow_html=True)
                                 fig = px.histogram(rules, x='lift', nbins=20, 
                                                  color_discrete_sequence=['#667eea'])
                                 st.plotly_chart(fig, use_container_width=True)
@@ -651,8 +738,8 @@ if df is not None:
     # TAB 5: REGRESSION
     # ========================================================================
     with tab5:
-        st.header("💰 Regression Analysis")
-        st.markdown("### Linear, Ridge, and Lasso Regression")
+        st.markdown('<h2 style="color: white;">💰 Regression Analysis</h2>', unsafe_allow_html=True)
+        st.markdown('<h3 style="color: white;">Linear, Ridge, and Lasso Regression</h3>', unsafe_allow_html=True)
 
         with st.sidebar:
             st.markdown("### 💰 Regression Settings")
@@ -730,7 +817,7 @@ if df is not None:
                                 'predictions': y_pred
                             }
 
-                    st.subheader("📊 Model Performance")
+                    st.markdown('<h3 style="color: white;">📊 Model Performance</h3>', unsafe_allow_html=True)
 
                     comparison_df = pd.DataFrame({
                         'Model': list(results.keys()),
@@ -748,7 +835,7 @@ if df is not None:
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        st.subheader("R² Score Comparison")
+                        st.markdown('<h3 style="color: white;">R² Score Comparison</h3>', unsafe_allow_html=True)
                         fig = px.bar(comparison_df, x='Model', y='R² Score',
                                    color='R² Score', color_continuous_scale='viridis',
                                    text='R² Score')
@@ -756,7 +843,7 @@ if df is not None:
                         st.plotly_chart(fig, use_container_width=True)
 
                     with col2:
-                        st.subheader("RMSE Comparison")
+                        st.markdown('<h3 style="color: white;">RMSE Comparison</h3>', unsafe_allow_html=True)
                         fig = px.bar(comparison_df, x='Model', y='RMSE (AED)',
                                    color='RMSE (AED)', color_continuous_scale='reds',
                                    text='RMSE (AED)')
@@ -766,7 +853,7 @@ if df is not None:
                     best_model_name = comparison_df.loc[comparison_df['R² Score'].idxmax(), 'Model']
                     st.success(f"🏆 Best Model: **{best_model_name}** (R² = {results[best_model_name]['R² Score']:.3f})")
 
-                    st.subheader(f"{best_model_name}: Predicted vs Actual")
+                    st.markdown(f'<h3 style="color: white;">{best_model_name}: Predicted vs Actual</h3>', unsafe_allow_html=True)
                     pred_actual_df = pd.DataFrame({
                         'Actual': y_test,
                         'Predicted': results[best_model_name]['predictions']
@@ -800,7 +887,7 @@ if df is not None:
     # TAB 6: DYNAMIC PRICING
     # ========================================================================
     with tab6:
-        st.header("🎛️ Dynamic Pricing Engine")
+        st.markdown('<h2 style="color: white;">🎛️ Dynamic Pricing Engine</h2>', unsafe_allow_html=True)
 
         with st.sidebar:
             st.markdown("### 🎛️ Pricing Parameters")
@@ -845,14 +932,14 @@ if df is not None:
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.subheader("Price by Loyalty Tier")
+                    st.markdown('<h3 style="color: white;">Price by Loyalty Tier</h3>', unsafe_allow_html=True)
                     fig = px.box(df_price, x='Loyalty_Tier', y='Dynamic_Price', color='Loyalty_Tier',
                                color_discrete_map={'Bronze': '#CD7F32', 'Silver': '#C0C0C0',
                                                   'Gold': '#FFD700', 'Platinum': '#E5E4E2'})
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
-                    st.subheader("Loyalty Score Distribution")
+                    st.markdown('<h3 style="color: white;">Loyalty Score Distribution</h3>', unsafe_allow_html=True)
                     fig = px.histogram(df_price, x='Loyalty_Score', nbins=30,
                                      color_discrete_sequence=['#667eea'])
                     st.plotly_chart(fig, use_container_width=True)
@@ -871,10 +958,9 @@ if df is not None:
 else:
     st.warning("⚠️ Please upload data.")
 
-# Footer
-st.markdown("---")
+# IMPROVED Footer - Now visible in both light and dark modes
 st.markdown("""
-<div style='text-align: center; color: white;'>
-    <p>🎮 Gaming Cafe Analytics Dashboard | Clustering Error Fixed ✅</p>
+<div class="footer">
+    <p style="margin: 0; color: white !important;">🎮 Gaming Cafe Analytics Dashboard | Built with Streamlit & ML | All Requirements Met ✅</p>
 </div>
 """, unsafe_allow_html=True)
